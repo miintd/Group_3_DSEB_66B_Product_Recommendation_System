@@ -10,17 +10,34 @@ This project develops a product recommendation system for an ecommerce platform.
 - **Web Interface**: A web application built with Sreamlit for easy interaction and visualization of recommendations.
 ### General Workflow
 ## 2. Task Allocation
-- Nguyễn Đức Quang (Leader):
+- Nguyễn Đức Quang (Leader): 17.5%
   - Assign task for team members
   - Prepare dataset
   - Building Multi-Modal Deep Learning Model for recommending products
-- Nguyễn Thị Diễm My (Vice Leader):
+  - Building a user authentication interface (login and registration) together with the functionality for adding products to the shopping cart
+  - Responsible for the login interface
+- Nguyễn Thị Diễm My (Vice Leader): 16.5%
   - Find the idea for the project
   - Building 3 recommendation systems: Collaborative Filtering, Content-based Filtering, Hybrid Approach
-- Nguyễn Trung Tùng:
-- Lê Cẩm Tú:
-- Đào Minh Dũng:
-- Phạm Thu Hường:
+  - Prepare the slides for presentation
+- Nguyễn Trung Tùng: 16.5%
+  - Prepare data set (browsing_history_expanded.csv, products_expanded.csv)
+  - Prepare the slides for the presentation
+- Lê Cẩm Tú: 16.5%
+  -Prepare data set (3 file csv remain)
+  -Find the idea for web design
+- Đào Minh Dũng: 16.5%
+  -Convert design to code
+  -Responsible for the product display module
+  -Responsible for displaying product images in the product listing
+  -Responsible for the main interface / landing page UI
+  -Responsible for the feedback interface
+- Phạm Thu Hường: 16.5%
+  -Responsible for:
+    -Post-processing and Result Visualization
+    -Running the Recommendation Algorithms
+    -Fetching User-Interacted Products
+  -Prepare the slides for presentation 
 ## 3. Instructions for installing and running the program
 ### Prerequisites
 - Python 3.
