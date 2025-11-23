@@ -1,17 +1,97 @@
 
 """
-    Tạo file user_expanded.csv
+    Tạo / cập nhật file users_expanded.csv phục vụ ĐĂNG KÝ + ĐĂNG NHẬP
 """
 import pandas as pd
+from pathlib import Path
+from datetime import datetime
+import hashlib
 
-# Tạo DataFrame chỉ có cột user_id
-df = pd.DataFrame({'user_id': range(1, 1001)})
+USERS_PATH = Path("users_expanded.csv")
 
-# Xuất ra file CSV
-df.to_csv('users_expanded.csv', index=False, encoding='utf-8')
 
-print(" File 'users_expanded.csv' đã được tạo thành công!")
+def init_user_table():
+    """
+    Khởi tạo file users_expanded.csv nếu chưa tồn tại.
+    Cột gồm: user_id, username, email, password_hash, created_at
+    """
+    if not USERS_PATH.exists():
+        df = pd.DataFrame(
+            columns=["user_id", "username", "email", "password_hash", "created_at"]
+        )
+        df.to_csv(USERS_PATH, index=False, encoding="utf-8")
+        print("Khởi tạo file 'users_expanded.csv' trống thành công.")
 
+
+def hash_password(password: str) -> str:
+    """
+    Hash mật khẩu để KHÔNG lưu plain text.
+    Có thể thay bằng bcrypt / passlib nếu dùng thật.
+    """
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+
+def register_user(username: str, email: str, password: str) -> bool:
+    """
+    Hàm dùng cho ĐĂNG KÝ:
+    - Tạo user mới nếu username & email chưa tồn tại.
+    - Trả về True nếu thành công, False nếu bị trùng.
+    """
+    init_user_table()
+    df = pd.read_csv(USERS_PATH)
+
+    # Check trùng username hoặc email
+    if not df.empty:
+        if (df["username"] == username).any():
+            print("Username đã tồn tại.")
+            return False
+        if (df["email"] == email).any():
+            print("Email đã tồn tại.")
+            return False
+
+    # Sinh user_id mới
+    if df.empty:
+        new_id = 1
+    else:
+        new_id = int(df["user_id"].max()) + 1
+
+    new_row = {
+        "user_id": new_id,
+        "username": username,
+        "email": email,
+        "password_hash": hash_password(password),
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+    df.to_csv(USERS_PATH, index=False, encoding="utf-8")
+    print(f"Tạo user mới thành công, user_id = {new_id}")
+    return True
+
+
+def check_login(username_or_email: str, password: str) -> bool:
+    """
+    Hàm dùng cho ĐĂNG NHẬP:
+    - username_or_email: user nhập username HOẶC email
+    - password: mật khẩu plain text từ form
+    Trả về True nếu login đúng, False nếu sai.
+    """
+    if not USERS_PATH.exists():
+        print("Chưa có file users_expanded.csv.")
+        return False
+
+    df = pd.read_csv(USERS_PATH)
+    if df.empty:
+        print("Chưa có user nào trong hệ thống.")
+        return False
+
+    pwd_hash = hash_password(password)
+    mask = (
+        ((df["username"] == username_or_email) |
+         (df["email"] == username_or_email))
+        & (df["password_hash"] == pwd_hash)
+    )
+    return mask.any()
 """
     Tạo file purchases_expanded.csv
 """
@@ -317,3 +397,4 @@ print(df.head(10)[["product_id", "description", "color", "category", "price", "r
 
 #Có cách nào cải thiện việc extract category không?"
 # ==>Có thể dùng ML để phân loại tự động từ description hoặc dùng computer vision để phân tích ảnh"
+
