@@ -64,7 +64,7 @@ st.markdown("""
 }
 .detail-img {
     width: 100%;
-    height: 260px;
+    height: 420px;
     object-fit: cover;
     border-radius: 8px;
     display: block;
@@ -342,7 +342,8 @@ def render_product_grid(products_df, product_images_df, title, user_id=None, key
                     render_product_card(product, product_images_df, user_id, f"{key_prefix}_{i+j}")
 
 def show_product_detail(product_id: int, products_df: pd.DataFrame, product_images_df: pd.DataFrame):
-    """Show product detail page"""
+    """Show product detail page (big image + click thumbnail to switch)"""
+
     product = products_df[products_df["product_id"] == product_id]
     if product.empty:
         st.error("Không tìm thấy sản phẩm")
@@ -350,48 +351,84 @@ def show_product_detail(product_id: int, products_df: pd.DataFrame, product_imag
             st.session_state.selected_product = None
             st.rerun()
         return
-    
+
     product = product.iloc[0]
-    
+
+    # Tiêu đề
     st.header(product['product_name'])
-    
-    col_img, col_info = st.columns([1, 1])
-    
+
+    col_img, col_info = st.columns([1.2, 1])
+
+    # ========== LEFT SIDE: IMAGES ==========
     with col_img:
+
         product_images = get_product_images(product_id, product_images_df)
+
+        st.markdown("### Hình ảnh sản phẩm")
+
         if product_images:
-            st.markdown("### Hình ảnh sản phẩm")
 
-            if len(product_images) == 1:
-                render_local_image(product_images[0], "detail-img")
-            else:
-                # lưới 2xN ảnh chi tiết
-                for row in range((len(product_images) + 1) // 2):
-                    cols = st.columns(2)
-                    for col in range(2):
-                        idx = row * 2 + col
-                        if idx < len(product_images):
-                            with cols[col]:
-                                render_local_image(product_images[idx], "detail-img")
+            # Nếu chưa có ảnh chọn → đặt mặc định
+            if "selected_image" not in st.session_state:
+                st.session_state.selected_image = 0
 
-            st.caption(f"Hiển thị {len(product_images)} ảnh")
+            # Ảnh lớn
+            render_local_image(product_images[st.session_state.selected_image], "detail-img")
+            st.write("")
+
+            # ======= THUMBNAIL BUTTONS =======
+            thumb_cols = st.columns(len(product_images))
+
+            for idx, path in enumerate(product_images):
+                with thumb_cols[idx]:
+
+                    # Viền highlight nếu ảnh được chọn
+                    border = "3px solid red" if idx == st.session_state.selected_image else "1px solid #ccc"
+
+                    # Hiển thị thumbnail nhỏ
+                    st.markdown(
+                        f"""
+                        <div style="border:{border}; padding:2px; border-radius:6px; margin-bottom:4px;">
+                        <img src="data:image/jpeg;base64,{base64.b64encode(open(path,'rb').read()).decode()}"
+                             style="width:70px; height:70px; object-fit:cover; border-radius:4px;">
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+                    # Nút đổi ảnh
+                    if st.button(f"Chọn", key=f"thumb_btn_{idx}"):
+                        st.session_state.selected_image = idx
+                        st.rerun()
+
         else:
             render_local_image(None, "detail-img")
-    
+
+    # ========== RIGHT SIDE: INFO ==========
     with col_info:
-        st.write(f"**Rating:** ⭐ {product.get('rating', 'N/A')}")
-        st.write(f"**Giá:** ${product.get('price', 'N/A')}")
+        st.write(f"**Rating:**  {product.get('rating', 'N/A')}")
+        st.markdown(
+            f"<div style='font-size:26px; font-weight:600; color:#ff4444; margin:4px 0 8px 0;'>"
+            f"${product.get('price', 'N/A')}"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
         st.write(f"**Loại:** {product.get('category', 'N/A')}")
-        
-        st.markdown("### Mô tả")
+
+        st.markdown("### Mô tả sản phẩm")
         st.write(product.get("description", "No description available"))
-        
-        if st.button("🛒 Thêm vào giỏ hàng", use_container_width=True):
-            add_to_cart(product_id, products_df)
-            st.success("Đã thêm vào giỏ hàng!")
-            st.rerun()
-    
+
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            if st.button("🛒 Thêm vào giỏ hàng", use_container_width=True):
+                add_to_cart(product_id, products_df)
+                st.success("Đã thêm vào giỏ hàng!")
+                st.rerun()
+        with col_btn2:
+            st.button(" Yêu thích", use_container_width=True)
+
     st.markdown("---")
+
     if st.button("⬅ Quay lại danh sách"):
         st.session_state.selected_product = None
         st.rerun()
@@ -496,18 +533,38 @@ def get_recommendations(user_id: int, algorithm: str, data: dict):
         st.error(f"Lỗi khi tạo gợi ý: {e}")
         return pd.DataFrame()
 
-def render_footer():
-    """Render footer at the bottom of the page"""
-    st.markdown("""
-    <div class="footer">
-        <img src="https://i.ibb.co/H0CyZ1M/Chat-GPT-Image-Nov-21-2025-09-36-56-AM.png" 
-             class="footer-image" 
-             alt="Footer Image">
-        <div style="margin-top: 15px; color: #666; font-size: 14px;">
-            © 2024 Product Recommender System. All rights reserved.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+def render_feedback_section():
+    st.markdown(
+        """
+<div style="
+background: #000;
+padding: 40px;
+margin-top: 60px;
+border-radius: 16px;
+text-align: center;
+color: white;
+">
+<h2 style="font-size: 28px; margin-bottom: 10px; font-weight: 600;">
+    Send feedback to us
+</h2>
+<p style="opacity: 0.8; font-size: 16px; margin-bottom: 25px;">
+    Your thoughts help us improve the experience.
+</p>
+
+<a href="mailto:feedback@example.com" style="
+    padding: 12px 26px;
+    background: white;
+    color: black;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+">
+    Submit Feedback
+</a>
+</div>
+        """,
+        unsafe_allow_html=True
+    )
 
 # ===== MAIN APP =====
 def main():
@@ -520,7 +577,7 @@ def main():
         trending = data['products'].head(8) if not data['products'].empty else pd.DataFrame()
         render_product_grid(trending, data['product_images'], "Trending items")
         
-        render_footer()
+        render_feedback_section()
         return
     
     # Logged in
@@ -546,15 +603,31 @@ def main():
     
     st.markdown(f"# {st.session_state.algorithm.replace('-', ' ').title()} Recommendations")
     
-    algorithms = ["collaborative", "content-based", "hybrid", "multi-modal"]
-    algorithm = st.selectbox(
+    algorithm_labels = {
+        "collaborative": "collaborative (Gợi ý từ lịch sử mua hàng của những người dùng tương tự)",
+        "content-based": "content-based (Gợi ý theo nội dung bạn đã xem)",
+        "hybrid": "hybrid (Kết hợp collaborative + content-based)",
+        "multi-modal": "multi-modal (Ảnh + văn bản + hành vi người dùng)"
+    }
+
+    # Danh sách label hiển thị
+    algorithm_choices = list(algorithm_labels.values())
+    current_label = algorithm_labels[st.session_state.algorithm]
+
+    # Selectbox hiển thị label + mô tả
+    selected_label = st.selectbox(
         "Chọn thuật toán:",
-        algorithms,
-        index=algorithms.index(st.session_state.algorithm)
+        algorithm_choices,
+        index=algorithm_choices.index(current_label)
     )
+
+    # Map từ label về key thật
+    algorithm = [k for k, v in algorithm_labels.items() if v == selected_label][0]
+
     if algorithm != st.session_state.algorithm:
         st.session_state.algorithm = algorithm
         st.rerun()
+
     
     purchased_ids = []
     if not data['purchases'].empty:
@@ -582,7 +655,7 @@ def main():
     else:
         st.info("Không có gợi ý khả dụng.")
     
-    render_footer()
+    render_feedback_section()
 
 if __name__ == "__main__":
     main()
