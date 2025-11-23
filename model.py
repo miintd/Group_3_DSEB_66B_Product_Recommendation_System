@@ -41,7 +41,7 @@ def collaborative_filtering(user_id: int, purchases: pd.DataFrame, products: pd.
     # nếu ko tìm thấy thì ghi 0 vào cột mới purchase_count
     recommendations['purchase_count'] = recommendations['product_id'].map(product_counts).fillna(0)
     # tính điểm dựa trên số lần xuất hiện * đánh giá
-    recommendations['raw_score'] = recommendations['purchases_count']*recommendations['rating']
+    recommendations['raw_score'] = recommendations['purchase_count']*recommendations['rating']
     # chuẩn hóa về thang [0,1] bằng cách chia cho lần xuất hiện nhiều nhất
     recommendations['score'] = recommendations['raw_score']/product_counts.max()
     # gắn nhãn nguồn
