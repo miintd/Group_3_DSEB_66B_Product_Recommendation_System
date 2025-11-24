@@ -53,7 +53,7 @@ Recommended products are shown with images, names of products, prices, rates and
     - Fetching User-Interacted Products
 ## 3. Instructions for installing and running the program
 ### Python version
-Python 3.13.7
+Python 3.12
 ### Required libraries
 Install libraries from file 'requirements.txt'
 ```bash
