@@ -52,7 +52,7 @@ Recommended products are shown with images, names of products, prices, rates and
     - Fetching User-Interacted Products
 ## 3. Instructions for installing and running the program
 ### Python version
-Python 3.10
+Python 3.13.7
 ### Required libraries
 Install libraries from file 'requirements.txt'
 ```bash
@@ -67,10 +67,25 @@ git clone https://github.com/miintd/Group_3_DSEB_66B_Product_Recommendation_Syst
 ```bash
 pip install -r requirement
 ```
-3. Run Streamlit app
-```bash
-streamlit run web.py
-```
+3. How to Run the Code (Web Product Recommendation System):
+  1. Download required image data
+      Download the image folder from the Google Drive link and place it inside the data folder.
+  2. Download metadata files
+      Download the files:
+          list_attr_cloth.txt
+          list_description_inshop.json
+  3. Update folder paths
+      Open tranfer_final.py
+      In the section that generates the file product_images_expanded.csv, update the root_dirs variable to match the correct image folder paths on your computer.
+  4. Regenerate processed image CSV
+      Run tranfer_final.py
+      → This will rebuild product_images_expanded.csv with the correct image paths.
+  5. Start the web application
+      Open the terminal in the project folder
+      Run the command:
+       ```bash
+       streamlit run web.py
+       ```
 ## 4. App user manual
 First, user enter username and password to login. If you do not have an account, click register and fill these information: username, email and password.  
 Then, the screen display the selection box for the suggested algorithm and trending items, include their image, name, price, rating and category. If you already have an account, select a recommendation method (collaborative, content-based, hybrid, or multi-modal). If you are new user, our system recommend trending items. You can click 'View details' to see more information and add to your shopping cart or your favorite.  
