@@ -68,21 +68,21 @@ git clone https://github.com/miintd/Group_3_DSEB_66B_Product_Recommendation_Syst
 pip install -r requirement
 ```
 3. How to Run the Code (Web Product Recommendation System):
-  - Download required image data
+  - Download required image data  
       Download the image folder from the Google Drive link and place it inside the data folder.
-  - Download metadata files
-      Download the files:
-          list_attr_cloth.txt
-          list_description_inshop.json
-  - Update folder paths
-      Open tranfer_final.py
+  - Download metadata files  
+      Download the files:  
+          list_attr_cloth.txt  
+          list_description_inshop.json  
+  - Update folder paths  
+      Open tranfer_final.py  
       In the section that generates the file product_images_expanded.csv, update the root_dirs variable to match the correct image folder paths on your computer.
-  - Regenerate processed image CSV
-      Run tranfer_final.py
-      → This will rebuild product_images_expanded.csv with the correct image paths.
-  - Start the web application
-      Open the terminal in the project folder
-      Run the command:
+  - Regenerate processed image CSV  
+      Run tranfer_final.py  
+      → This will rebuild product_images_expanded.csv with the correct image paths.  
+  - Start the web application  
+      Open the terminal in the project folder  
+      Run the command: 
        ```bash
        streamlit run web.py
        ```
