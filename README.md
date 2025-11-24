@@ -45,7 +45,8 @@ Recommended products are shown with images, names of products, prices, rates and
   - Responsible for the main interface / landing page UI
   - Responsible for the feedback interface
 - Phạm Thu Hường: 16.5%
-  - Prepare the slides for presentation 
+  - Prepare the slides for presentation
+  - Function to update purchase history
   - Responsible for:
     - Post-processing and Result Visualization
     - Running the Recommendation Algorithms
