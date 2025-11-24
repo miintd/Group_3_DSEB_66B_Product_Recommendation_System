@@ -1,12 +1,19 @@
+# ------------------------------------------------------------
+# Streamlit UI for Product Recommender System (Optimized)
+# ------------------------------------------------------------
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 import os
 import base64
 from typing import List
+from datetime import datetime
 
+# ===== CONFIGURATION =====
 st.set_page_config(page_title="Product Recommender", layout="wide")
 
+# ===== CONSTANTS =====
 CSV_FILES = {
     'users': 'users_expanded.csv',
     'products': 'products_expanded.csv',
@@ -15,6 +22,7 @@ CSV_FILES = {
     'browsing_history': 'browsing_history_expanded.csv'
 }
 
+# ===== SESSION STATE =====
 if 'logged_in' not in st.session_state:
     st.session_state.update({
         'logged_in': False,
@@ -94,6 +102,76 @@ def load_data():
         except:
             data[name] = pd.DataFrame()
     return data
+# ====== GHI LỊCH SỬ TƯƠNG TÁC (MUA / XEM) ======
+def append_row_to_csv(file_path: str, row: dict):
+    """
+    Ghi thêm 1 dòng vào file CSV.
+    Nếu file chưa tồn tại -> tạo mới.
+    Nếu file đã có cột khác -> fill NaN cho cột không dùng.
+    Sau khi ghi xong -> clear cache load_data().
+    """
+    # Nếu file tồn tại -> đọc
+    if os.path.exists(file_path):
+        try:
+            df = pd.read_csv(file_path)
+        except Exception:
+            df = pd.DataFrame()
+
+        # Nếu df đang rỗng -> tạo mới luôn
+        if df.empty:
+            df = pd.DataFrame([row])
+        else:
+            # Đảm bảo tất cả key trong row có cột trong df
+            for col in row.keys():
+                if col not in df.columns:
+                    df[col] = np.nan
+
+            # Tạo bản ghi full theo cột hiện tại của df
+            full_row = {col: row.get(col, np.nan) for col in df.columns}
+            df = pd.concat([df, pd.DataFrame([full_row])], ignore_index=True)
+    else:
+        # File chưa tồn tại -> tạo DataFrame mới
+        df = pd.DataFrame([row])
+
+    # Ghi lại file
+    df.to_csv(file_path, index=False, encoding="utf-8")
+
+    # Clear cache load_data để lần sau đọc dữ liệu mới
+    try:
+        load_data.clear()
+    except Exception:
+        pass
+
+
+def log_browsing_history(user_id: int, product_id):
+    """Ghi lịch sử duyệt (xem chi tiết sản phẩm)"""
+    if user_id is None:
+        return
+    append_row_to_csv(
+        CSV_FILES["browsing_history"],
+        {
+            "user_id": user_id,
+            "product_id": product_id,
+            "timestamp": datetime.now().isoformat(),
+            "event": "view",
+        },
+    )
+
+
+def log_purchase_history(user_id: int, product_id, quantity: int = 1):
+    """Ghi lịch sử mua hàng (khi thanh toán)"""
+    if user_id is None:
+        return
+    append_row_to_csv(
+        CSV_FILES["purchases"],
+        {
+            "user_id": user_id,
+            "product_id": product_id,
+            "quantity": quantity,
+            "timestamp": datetime.now().isoformat(),
+            "event": "purchase",
+        },
+    )
 
 # ===== AUTHENTICATION FUNCTIONS =====
 def load_users():
@@ -121,14 +199,17 @@ def register_user(username, password, email):
     """Register new user"""
     users_df = load_users()
     
+    # Check if username already exists
     if not users_df.empty and username in users_df['username'].values:
         return False, "Tên đăng nhập đã tồn tại"
     
+    # Generate new user_id
     if users_df.empty:
         new_user_id = 1001
     else:
         new_user_id = users_df['user_id'].max() + 1
     
+    # Add new user
     new_user = pd.DataFrame([{
         'user_id': new_user_id,
         'username': username,
@@ -177,6 +258,7 @@ def get_product_images(product_id: int, product_images_df: pd.DataFrame) -> List
 def render_local_image(path: str, css_class: str) -> None:
     """Render local image with fixed size using base64 + <img>."""
     if not path or not os.path.exists(path):
+        # fallback
         url = "https://via.placeholder.com/400x300?text=No+Image"
         st.markdown(
             f'<img src="{url}" class="{css_class}">',
@@ -295,12 +377,14 @@ def render_product_card(product, product_images_df, user_id, key_prefix):
     with st.container():
         st.markdown('<div class="product-card">', unsafe_allow_html=True)
 
+        # Ảnh sản phẩm (full chiều ngang, cố định chiều cao, crop đẹp)
         images = get_product_images(product["product_id"], product_images_df)
         if images:
             render_local_image(images[0], "product-img")
         else:
             render_local_image(None, "product-img")
 
+        # Thông tin
         st.markdown(f'**{product.get("product_name", "")}**')
         st.markdown(f'**${product.get("price", "N/A")}** · ⭐ {product.get("rating", "N/A")}')
         st.markdown(f'*{product.get("category", "N/A")}*')
@@ -331,6 +415,10 @@ def render_product_grid(products_df, product_images_df, title, user_id=None, key
 def show_product_detail(product_id: int, products_df: pd.DataFrame, product_images_df: pd.DataFrame):
     """Show product detail page (big image + click thumbnail to switch)"""
 
+    # NEW: ghi lại lịch sử xem chi tiết
+    user_id = st.session_state.get("user_id")
+    log_browsing_history(user_id, product_id)
+
     product = products_df[products_df["product_id"] == product_id]
     if product.empty:
         st.error("Không tìm thấy sản phẩm")
@@ -341,6 +429,7 @@ def show_product_detail(product_id: int, products_df: pd.DataFrame, product_imag
 
     product = product.iloc[0]
 
+    # Tiêu đề
     st.header(product['product_name'])
 
     col_img, col_info = st.columns([1.2, 1])
@@ -354,6 +443,7 @@ def show_product_detail(product_id: int, products_df: pd.DataFrame, product_imag
 
         if product_images:
 
+            # Nếu chưa có ảnh chọn → đặt mặc định
             if "selected_image" not in st.session_state:
                 st.session_state.selected_image = 0
 
@@ -366,7 +456,11 @@ def show_product_detail(product_id: int, products_df: pd.DataFrame, product_imag
 
             for idx, path in enumerate(product_images):
                 with thumb_cols[idx]:
+
+                    # Viền highlight nếu ảnh được chọn
                     border = "3px solid red" if idx == st.session_state.selected_image else "1px solid #ccc"
+
+                    # Hiển thị thumbnail nhỏ
                     st.markdown(
                         f"""
                         <div style="border:{border}; padding:2px; border-radius:6px; margin-bottom:4px;">
@@ -461,16 +555,33 @@ def render_cart():
             st.write(f"${item['price']} x {item['quantity']}")
         with col2:
             if st.button("❌", key=f"remove_{item['product_id']}"):
-                st.session_state.cart = [i for i in st.session_state.cart if i["product_id"] != item['product_id']]
+                st.session_state.cart = [
+                    i for i in st.session_state.cart 
+                    if i["product_id"] != item['product_id']
+                ]
                 st.rerun()
         total += item["price"] * item["quantity"]
     
     st.sidebar.markdown(f"**Tổng cộng: ${total:.2f}**")
     
+    # NÚT THANH TOÁN + LƯU LỊCH SỬ MUA HÀNG
     if st.sidebar.button("🛒 Thanh toán", use_container_width=True):
+        user_id = st.session_state.get("user_id")
+
+        # Ghi lịch sử mua cho từng item trong giỏ
+        for item in st.session_state.cart:
+            log_purchase_history(
+                user_id=user_id,
+                product_id=item["product_id"],
+                quantity=item.get("quantity", 1),
+            )
+
+        # Xóa giỏ + rerun để load_data() đọc CSV mới
         st.session_state.cart = []
-        st.success("Đã thanh toán thành công!")
+        st.success("Đã thanh toán thành công! Lịch sử mua đã được cập nhật.")
         st.rerun()
+
+
 
 # ===== RECOMMENDATION ENGINE =====
 def get_recommendations(user_id: int, algorithm: str, data: dict):
@@ -494,11 +605,13 @@ def get_recommendations(user_id: int, algorithm: str, data: dict):
                 num_users = users_df["user_id"].nunique() if not users_df.empty else 1000
                 num_products = products_df["product_id"].nunique() if not products_df.empty else 1000
 
+                # demo: sample bớt sản phẩm
                 sample_size = min(50, len(products_df))
                 sample_products = products_df.sample(sample_size, random_state=42).copy()
 
                 st.info(f"Đang xử lý {sample_size} sản phẩm bằng mô hình Multi-Modal...")
 
+                # DEMO: tạo score random (thay bằng infer thật nếu bạn có model)
                 sample_products["score"] = np.random.random(len(sample_products))
                 sample_products["source"] = "Multi-Modal"
                 return sample_products
@@ -549,6 +662,7 @@ color: white;
 def main():
     data = load_data()
     
+    # Not logged in - show landing page
     if not st.session_state.logged_in:
         render_hero_section()
         
@@ -558,6 +672,7 @@ def main():
         render_feedback_section()
         return
     
+    # Logged in
     user_id = st.session_state.user_id
     
     render_cart()
@@ -605,6 +720,7 @@ def main():
         st.session_state.algorithm = algorithm
         st.rerun()
 
+    
     purchased_ids = []
     if not data['purchases'].empty:
         purchased_ids = data['purchases'][data['purchases']["user_id"] == user_id]["product_id"].unique()
@@ -635,4 +751,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
