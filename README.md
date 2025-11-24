@@ -69,7 +69,7 @@ streamlit run web.py
 ```
 ## 4. App user manual
 First, user enter username and password to login. If you do not have an account, click register and fill these information: username, email and password.  
-Then, the screen display the selection box for the suggested algorithm and trending items, include their image, name, price, rating and category. If you already have an account, select a recommendation method (collaborative, content-based, hybrid, or multi-modal). If you are new user, our system recommend trending items. You can click 'View detail' to see more information and add to your shopping cart or your favorite.
-After choosing a recommendation method, the screen will display a list of suggested products based on that algorithm. Then the user can browse through each product and select the product they like and want to buy.
-The shopping cart will be displayed on the left side of the screen and you can click the "checkout" button. However, we have not built a complete checkout page yet, as this is just a web simulation of how the 4 recommendation algorithms work.
+Then, the screen display the selection box for the suggested algorithm and trending items, include their image, name, price, rating and category. If you already have an account, select a recommendation method (collaborative, content-based, hybrid, or multi-modal). If you are new user, our system recommend trending items. You can click 'View detail' to see more information and add to your shopping cart or your favorite.  
+After choosing a recommendation method, the screen will display a list of suggested products based on that algorithm. Then the user can browse through each product and select the product they like and want to buy.  
+The shopping cart will be displayed on the left side of the screen and you can click the "checkout" button. However, we have not built a complete checkout page yet, as this is just a web simulation of how the 4 recommendation algorithms work.  
 Finally, users can send feedback to us so we can improve our website for better experiences.
