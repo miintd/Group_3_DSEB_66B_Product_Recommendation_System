@@ -19,7 +19,7 @@ Users can choose among four recommendation modes: Collaborative Filtering, Conte
 - Ranking and Output Generation:
 The recommendation scores are ranked and formatted into displayable product lists.
 - Display on Streamlit UI:
-Recommended products are shown with images, names of products, prices, rates and categories
+Recommended products are shown with images, names of products, prices, rates and categories.  
 **Note:** This project is a demonstration prototype. User accounts, interaction logs, and product data are simulated for experimentation and do not represent real commercial activity.
 ## 2. Task Allocation
 - Nguyễn Đức Quang (Leader): 17.5%
