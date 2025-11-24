@@ -10,15 +10,15 @@ This project develops a product recommendation system for an ecommerce platform.
 - **Web Interface**: A web application built with Sreamlit for easy interaction and visualization of recommendations.
 ### General Workflow
 The application simulates an ecommerce environment and allows users to log in with demo accounts through a Streamlit web interface. Product data, user interactions, and purchase history are generated from synthetic datasets for experimentation and demonstration purposes.
-- User Interaction via Streamlit UI
+- User Interaction via Streamlit UI:
 Users select a predefined demo account to simulate browsing and shopping behavior.
-- Loading Simulated Data
+- Loading Simulated Data:
 The system loads user information, product information, product images, interaction history, purchase history.
-- Recommendation Engine Execution
+- Recommendation Engine Execution:
 Users can choose among four recommendation modes: Collaborative Filtering, Content-Based Filtering, Hybrid Approach, Multi-Modal Deep Learning Model
-- Ranking and Output Generation
+- Ranking and Output Generation:
 The recommendation scores are ranked and formatted into displayable product lists.
-- Display on Streamlit UI
+- Display on Streamlit UI:
 Recommended products are shown with images, names of products, prices, rates and categories
 **Note:** This project is a demonstration prototype. User accounts, interaction logs, and product data are simulated for experimentation and do not represent real commercial activity.
 ## 2. Task Allocation
@@ -68,3 +68,8 @@ git clone https://github.com/miintd/ProductRecommendationSysem.git
 streamlit run web.py
 ```
 ## 4. App user manual
+First, user enter username and password to login. If you do not have an account, click register and fill these information: username, email and password.  
+Then, the screen display the selection box for the suggested algorithm and trending items, include their image, name, price, rating and category. If you already have an account, select a recommendation method (collaborative, content-based, hybrid, or multi-modal). If you are new user, our system recommend trending items. You can click 'View detail' to see more information and add to your shopping cart or your favorite.
+After choosing a recommendation method, the screen will display a list of suggested products based on that algorithm. Then the user can browse through each product and select the product they like and want to buy.
+The shopping cart will be displayed on the left side of the screen and you can click the "checkout" button. However, we have not built a complete checkout page yet, as this is just a web simulation of how the 4 recommendation algorithms work.
+Finally, users can send feedback to us so we can improve our website for better experiences.
