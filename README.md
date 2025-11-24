@@ -61,7 +61,7 @@ pip install -r requirement
 ### Running the Application
 1. Clone repository
 ```bash
-git clone https://github.com/miintd/ProductRecommendationSysem.git
+git clone https://github.com/miintd/Group_3_DSEB_66B_Product_Recommendation_System.git
 ```
 3. Run Streamlit app
 ```bash
