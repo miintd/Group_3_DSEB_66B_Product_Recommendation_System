@@ -51,6 +51,7 @@ def content_based_filtering(user_id: int, purchases: pd.DataFrame, browsing_hist
     logger.debug(f"Content-based recommendations:\n{recommendations[['product_id', 'score', 'source']]}")
     return recommendations
 
+'''Hàm gợi ý kết hợp'''
 def hybrid_recommendation(user_id, purchases, browsing_history, products):
     logger.debug(f"Hybrid Recommendation for user_ id: {user_id}")
     user_purchases = purchases[purchases['user_id'] == user_id]['product_id'].unique()
