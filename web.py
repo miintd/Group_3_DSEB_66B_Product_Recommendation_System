@@ -403,7 +403,7 @@ def render_product_grid(products_df, product_images_df, title, user_id=None, key
         st.info("Không có sản phẩm")
         return
 
-    max_items = 30   # HIỂN THỊ TỐI ĐA 30 SẢN PHẨM
+    max_items = 36   # HIỂN THỊ TỐI ĐA 30 SẢN PHẨM
     items_to_show = min(len(products_df), max_items)
 
     for i in range(0, items_to_show, 4):  # 4 sản phẩm mỗi hàng
@@ -802,7 +802,7 @@ def main():
     if not st.session_state.logged_in:
         render_hero_section()
         
-        trending = data['products'].head(8) if not data['products'].empty else pd.DataFrame()
+        trending = data['products'].head(20) if not data['products'].empty else pd.DataFrame()
         render_product_grid(trending, data['product_images'], "Trending items")
         
         render_feedback_section()
