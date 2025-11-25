@@ -395,7 +395,6 @@ def render_product_card(product, product_images_df, user_id, key_prefix):
             st.rerun()
         
         st.markdown('</div>', unsafe_allow_html=True)
-
 def render_product_grid(products_df, product_images_df, title, user_id=None, key_prefix="grid"):
     """Render product grid"""
     st.markdown(f"## {title}")
@@ -403,14 +402,19 @@ def render_product_grid(products_df, product_images_df, title, user_id=None, key
     if products_df.empty:
         st.info("Không có sản phẩm")
         return
-    
-    for i in range(0, min(len(products_df), 12), 4):  # Max 12 products
+
+    max_items = 30   # HIỂN THỊ TỐI ĐA 30 SẢN PHẨM
+    items_to_show = min(len(products_df), max_items)
+
+    for i in range(0, items_to_show, 4):  # 4 sản phẩm mỗi hàng
         cols = st.columns(4)
         for j in range(4):
-            if i + j < len(products_df):
+            idx = i + j
+            if idx < items_to_show:
                 with cols[j]:
-                    product = products_df.iloc[i + j]
-                    render_product_card(product, product_images_df, user_id, f"{key_prefix}_{i+j}")
+                    product = products_df.iloc[idx]
+                    render_product_card(product, product_images_df, user_id, f"{key_prefix}_{idx}")
+
 
 def show_product_detail(product_id: int, products_df: pd.DataFrame, product_images_df: pd.DataFrame):
     """Show product detail page (big image + click thumbnail to switch)"""
@@ -581,46 +585,178 @@ def render_cart():
         st.success("Đã thanh toán thành công! Lịch sử mua đã được cập nhật.")
         st.rerun()
 
+@st.cache_resource
+def load_multimodal_model(num_users: int, num_products: int, embedding_dim: int = 128):
+    """
+    Khởi tạo MultiModalModel và cache lại để không phải load nhiều lần.
+    Ở đây mình chỉ demo: tạo model random weight.
+    Nếu bạn có file weight đã train thì load thêm ở đây.
+    """
+    import torch
+    from model import MultiModalModel  # model.py của bạn
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# ===== RECOMMENDATION ENGINE =====
+    model = MultiModalModel(num_users=num_users, num_products=num_products, embedding_dim=embedding_dim)
+    model.to(device)
+    model.eval()
+
+    return model, device
+
 def get_recommendations(user_id: int, algorithm: str, data: dict):
-    """Get product recommendations"""
+    """Get product recommendations."""
     try:
         if algorithm == "collaborative":
             from model import collaborative_filtering
-            return collaborative_filtering(user_id, data['purchases'], data['products'])
+            return collaborative_filtering(
+                user_id,
+                data["purchases"],
+                data["products"],
+            )
+
         elif algorithm == "content-based":
             from model import content_based_filtering
-            return content_based_filtering(user_id, data['purchases'], data['browsing_history'], data['products'])
+            return content_based_filtering(
+                user_id,
+                data["purchases"],
+                data["browsing_history"],
+                data["products"],
+            )
+
         elif algorithm == "hybrid":
             from model import hybrid_recommendation
-            return hybrid_recommendation(user_id, data['purchases'], data['browsing_history'], data['products'])
+            return hybrid_recommendation(
+                user_id,
+                data["purchases"],
+                data["browsing_history"],
+                data["products"],
+            )
+
+        # =============== MULTI-MODAL ===============
         elif algorithm == "multi-modal":
             try:
-                import torch  # để đảm bảo đã cài
-                from model import MultiModalModel  # nếu bạn có implement thật
+                import torch
 
-                users_df, products_df = data['users'], data['products']
-                num_users = users_df["user_id"].nunique() if not users_df.empty else 1000
-                num_products = products_df["product_id"].nunique() if not products_df.empty else 1000
+                users_df       = data["users"]
+                products_df    = data["products"]
+                product_images = data["product_images"]
 
-                # demo: sample bớt sản phẩm
+                # Không có sản phẩm thì chịu
+                if products_df.empty:
+                    return pd.DataFrame()
+
+                # ----- Số user cho Embedding -----
+                if users_df.empty:
+                    st.warning(
+                        "Chưa có dữ liệu users, multi-modal sẽ dùng cấu hình mặc định."
+                    )
+                    num_users = 2000
+                else:
+                    # user_id là số (1001, 1002, ...) nên ép int OK
+                    num_users = int(users_df["user_id"].max()) + 1
+
+                # ----- Số product cho Embedding -----
+                # KHÔNG ép product_id string sang int nữa
+                # mỗi dòng sản phẩm coi như một index 0..N-1
+                num_products = len(products_df)
+
+                # Load / cache model + device (giả sử bạn có hàm này)
+                model, device = load_multimodal_model(
+                    num_users=num_users,
+                    num_products=num_products,
+                    embedding_dim=128,
+                )
+
+                # Chọn một tập sản phẩm để gợi ý (vd tối đa 50 sp)
                 sample_size = min(50, len(products_df))
-                sample_products = products_df.sample(sample_size, random_state=42).copy()
+                sample_products = (
+                    products_df
+                    .sample(sample_size, random_state=42)
+                    .copy()
+                    .reset_index(drop=True)   # index: 0..sample_size-1
+                )
 
-                st.info(f"Đang xử lý {sample_size} sản phẩm bằng mô hình Multi-Modal...")
+                st.info(
+                    f"Đang tính embedding đa phương thức cho {sample_size} sản phẩm..."
+                )
 
-                # DEMO: tạo score random (thay bằng infer thật nếu bạn có model)
-                sample_products["score"] = np.random.random(len(sample_products))
+                # ===== 1) user_ids tensor: lặp user_id cho toàn bộ sample =====
+                user_id_value = int(user_id)
+                user_ids_tensor = torch.full(
+                    (sample_size,),
+                    fill_value=user_id_value,
+                    dtype=torch.long,
+                    device=device,
+                )
+
+                # ===== 2) product_ids tensor: dùng CHỈ SỐ DÒNG 0..(sample_size-1) =====
+                product_ids_tensor = torch.arange(
+                    sample_size,
+                    dtype=torch.long,
+                    device=device,
+                )
+
+                # ===== 3) text_batch (mô tả sản phẩm) =====
+                if "description" in sample_products.columns:
+                    text_batch = (
+                        sample_products["description"]
+                        .fillna("")
+                        .tolist()
+                    )
+                else:
+                    text_batch = [""] * sample_size
+
+                # ===== 4) edge_index dummy cho đúng signature của forward =====
+                edge_index = torch.empty(
+                    (2, 0),
+                    dtype=torch.long,
+                    device=device,
+                )
+
+                # ===== 5) Gọi MultiModalModel để lấy embedding =====
+                with torch.no_grad():
+                    mm_emb = model(
+                        user_ids=user_ids_tensor,
+                        product_ids=product_ids_tensor,
+                        text_batch=text_batch,
+                        edge_index=edge_index,
+                        # hiện tại mapping product_id string -> ảnh trong model forward
+                        # sẽ không khớp với index 0..N-1, nên tạm thời cho None
+                        product_images_df=None,
+                    )  # shape: [sample_size, embedding_dim]
+
+                    # Demo: dùng L2 norm làm score
+                    scores = (
+                        mm_emb.norm(dim=-1)
+                        .detach()
+                        .cpu()
+                        .numpy()
+                    )
+
+                sample_products["score"]  = scores
                 sample_products["source"] = "Multi-Modal"
+
+                # Sắp xếp sản phẩm theo score giảm dần
+                sample_products = sample_products.sort_values(
+                    "score",
+                    ascending=False,
+                )
+
                 return sample_products
 
             except ImportError:
-                st.warning("Thiếu thư viện torch để chạy multi-modal.")
+                st.warning(
+                    "Thiếu thư viện torch hoặc model MultiModalModel để chạy multi-modal."
+                )
                 return pd.DataFrame()
+            except Exception as e:
+                st.error(f"Lỗi khi chạy multi-modal: {e}")
+                return pd.DataFrame()
+
+        # Trường hợp không khớp thuật toán nào
         else:
             return pd.DataFrame()
+
     except Exception as e:
         st.error(f"Lỗi khi tạo gợi ý: {e}")
         return pd.DataFrame()
@@ -730,7 +866,7 @@ def main():
         browsed_ids = data['browsing_history'][data['browsing_history']["user_id"] == user_id]["product_id"].unique()
     
     interacted_ids = np.union1d(purchased_ids, browsed_ids)
-    interacted_products = data['products'][data['products']["product_id"].isin(interacted_ids)].head(8)
+    interacted_products = data['products'][data['products']["product_id"].isin(interacted_ids)].head(36)
     
     if not interacted_products.empty:
         render_product_grid(interacted_products, data['product_images'], "Sản phẩm đã xem", user_id, "interacted")
@@ -739,7 +875,7 @@ def main():
         recommendations = get_recommendations(user_id, st.session_state.algorithm, data)
     
     if not recommendations.empty:
-        new_recs = recommendations[~recommendations["product_id"].isin(interacted_ids)].head(8)
+        new_recs = recommendations[~recommendations["product_id"].isin(interacted_ids)].head(36)
         if not new_recs.empty:
             render_product_grid(new_recs, data['product_images'], "Gợi ý cho bạn", user_id, "recommendations")
         else:
@@ -751,3 +887,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
